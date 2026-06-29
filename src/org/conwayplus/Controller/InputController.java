@@ -1,13 +1,12 @@
 package org.conwayplus.Controller;
 
 import org.conwayplus.Model.*;
-import org.conwayplus.View.ControlPaneel;
-import org.conwayplus.View.GridPaneel;
-
+import org.conwayplus.View.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Map;
+import javax.swing.JButton;
 
 public class InputController {
     private final Wereld wereld;
@@ -25,47 +24,34 @@ public class InputController {
     }
 
     public void activeerKoppelingen() {
-        // Muis: Links = Conway, Rechts = Alternatief
-        gridPaneel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                int x = e.getX() / gridPaneel.getCellSize();
-                int y = e.getY() / gridPaneel.getCellSize();
-
-                if (wereld.isLevend(x, y)) {
-                    wereld.verwijderCel(x, y);
-                } else {
-                    CelType type = (e.getButton() == MouseEvent.BUTTON3) ? CelType.ALTERNATIEF : CelType.CONWAY;
-                    wereld.plaatsCel(x, y, type);
+        if (gridPaneel != null) {
+            gridPaneel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    int x = e.getX() / gridPaneel.getCellSize();
+                    int y = e.getY() / gridPaneel.getCellSize();
+                    if (wereld.isLevend(x, y)) wereld.verwijderCel(x, y);
+                    else wereld.plaatsCel(x, y, (e.getButton() == MouseEvent.BUTTON3) ? CelType.ALTERNATIEF : CelType.CONWAY);
+                    gridPaneel.repaint();
                 }
+            });
+        }
+
+        if (controlPaneel != null) {
+            safeAddActionListener(controlPaneel.getStartButton(), e -> clock.start());
+            safeAddActionListener(controlPaneel.getStopButton(), e -> clock.stop());
+            safeAddActionListener(controlPaneel.getClearButton(), e -> {
+                wereld.clear();
+                verwerker.resetTicks();
+                controlPaneel.setTickCount(0);
                 gridPaneel.repaint();
-            }
-        });
+            });
+            safeAddActionListener(controlPaneel.getVersnelButton(), e -> clock.versnel());
+            safeAddActionListener(controlPaneel.getVerlangzaamButton(), e -> clock.verlangzaam());
+        }
+    }
 
-        // Knoppen (Start, Stop, Clear, Snelheid)
-        controlPaneel.getStartButton().addActionListener(e -> clock.start());
-        controlPaneel.getStopButton().addActionListener(e -> clock.stop());
-        controlPaneel.getClearButton().addActionListener(e -> {
-            wereld.clear();
-            verwerker.resetTicks();
-            controlPaneel.setTickCount(0);
-            gridPaneel.repaint();
-        });
-        controlPaneel.getVersnelButton().addActionListener(e -> clock.versnel());
-        controlPaneel.getVerlangzaamButton().addActionListener(e -> clock.verlangzaam());
-
-        // Patroon laden via de Factory
-        controlPaneel.getLaadButton().addActionListener(e -> {
-            wereld.clear();
-            PatroonType type = (PatroonType) controlPaneel.getPatroonDropdown().getSelectedItem();
-            PatroonFactory fabriek = new PatroonFactory();
-            Map<Point, Cel> patroon = fabriek.creeerPatroon(type, 30, 30);
-
-            for (Map.Entry<Point, Cel> entry : patroon.entrySet()) {
-                CelType cType = (entry.getValue() instanceof ConwayCel) ? CelType.CONWAY : CelType.ALTERNATIEF;
-                wereld.plaatsCel(entry.getKey().x, entry.getKey().y, cType);
-            }
-            gridPaneel.repaint();
-        });
+    private void safeAddActionListener(JButton btn, java.awt.event.ActionListener al) {
+        if (btn != null) btn.addActionListener(al);
     }
 }
